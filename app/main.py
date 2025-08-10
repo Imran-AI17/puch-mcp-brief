@@ -11,7 +11,7 @@ app = FastAPI(title="Puch Trust Brief MCP")
 OWNER_PHONE = os.getenv("OWNER_PHONE", "919999999999") # digits only, e.g., 919876543210
 VALIDATION_TOKEN = os.getenv("VALIDATION_TOKEN", "changeme")
 
------ Schemas -----
+#----- Schemas -----
 class ValidateInput(BaseModel):
 bearer_token: str
 
@@ -33,12 +33,12 @@ citations: List[Citation]
 confidence: float
 latency_ms: int
 
------ Health -----
+#----- Health -----
 @app.get("/")
 def health():
 return {"status": "ok"}
 
------ MCP metadata (lets Puch list your tools) -----
+#----- MCP metadata (lets Puch list your tools) -----
 @app.get("/mcp")
 def mcp_metadata():
 return {
@@ -58,14 +58,14 @@ return {
 ],
 }
 
------ Required by Puch -----
+#----- Required by Puch -----
 @app.post("/mcp/validate", response_model=ValidateOutput)
 def validate(payload: ValidateInput):
 if payload.bearer_token != VALIDATION_TOKEN:
 raise HTTPException(status_code=401, detail="invalid bearer_token")
 return ValidateOutput(phone=OWNER_PHONE)
 
------ Minimal analyzer -----
+#----- Minimal analyzer -----
 @app.post("/mcp/analyze_claim", response_model=AnalyzeOutput)
 def analyze_claim(payload: AnalyzeInput):
 t0 = time.time()
