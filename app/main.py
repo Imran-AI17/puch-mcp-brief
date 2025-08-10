@@ -60,6 +60,7 @@ citations: List[Citation] = []
 bullets: List[str] = []
 verdict = "unverified"
 confidence = 0.4
+
 if text.startswith("http://") or text.startswith("https://"):
     try:
         resp = httpx.get(text, timeout=6.0, follow_redirects=True)
