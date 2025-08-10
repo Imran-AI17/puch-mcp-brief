@@ -87,3 +87,4 @@ return AnalyzeOutput(
     confidence=confidence,
     latency_ms=latency_ms,
 )
+
