@@ -7,7 +7,7 @@ import httpx
 
 app = FastAPI(title="Puch Trust Brief MCP")
 
-Environment variables (set these in Render)
+#Environment variables (set these in Render)
 OWNER_PHONE = os.getenv("OWNER_PHONE", "919999999999") # digits only, e.g., 919876543210
 VALIDATION_TOKEN = os.getenv("VALIDATION_TOKEN", "changeme")
 
