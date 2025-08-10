@@ -7,11 +7,9 @@ import httpx
 
 app = FastAPI(title="Puch Trust Brief MCP")
 
-#Environment variables (set these in Render)
-OWNER_PHONE = os.getenv("OWNER_PHONE", "919999999999") # digits only, e.g., 919876543210
+OWNER_PHONE = os.getenv("OWNER_PHONE", "919999999999")
 VALIDATION_TOKEN = os.getenv("VALIDATION_TOKEN", "changeme")
 
-#----- Schemas -----
 class ValidateInput(BaseModel):
 bearer_token: str
 
@@ -19,7 +17,7 @@ class ValidateOutput(BaseModel):
 phone: str
 
 class AnalyzeInput(BaseModel):
-input: str # text or URL
+input: str
 
 class Citation(BaseModel):
 title: str
@@ -33,39 +31,27 @@ citations: List[Citation]
 confidence: float
 latency_ms: int
 
-#----- Health -----
 @app.get("/")
 def health():
 return {"status": "ok"}
 
-#----- MCP metadata (lets Puch list your tools) -----
 @app.get("/mcp")
 def mcp_metadata():
 return {
 "name": "puch-trust-brief",
 "version": "0.1.0",
 "tools": [
-{
-"name": "validate",
-"schema": {"bearer_token": "string"},
-"description": "Return owner phone in {country_code}{number} format."
-},
-{
-"name": "analyze_claim",
-"schema": {"input": "string"},
-"description": "Trust Brief for a text or URL."
-}
+{"name": "validate", "schema": {"bearer_token": "string"}, "description": "Return owner phone in {country_code}{number} format."},
+{"name": "analyze_claim", "schema": {"input": "string"}, "description": "Trust Brief for a text or URL."}
 ],
 }
 
-#----- Required by Puch -----
 @app.post("/mcp/validate", response_model=ValidateOutput)
 def validate(payload: ValidateInput):
 if payload.bearer_token != VALIDATION_TOKEN:
 raise HTTPException(status_code=401, detail="invalid bearer_token")
 return ValidateOutput(phone=OWNER_PHONE)
 
-#----- Minimal analyzer -----
 @app.post("/mcp/analyze_claim", response_model=AnalyzeOutput)
 def analyze_claim(payload: AnalyzeInput):
 t0 = time.time()
@@ -74,8 +60,6 @@ citations: List[Citation] = []
 bullets: List[str] = []
 verdict = "unverified"
 confidence = 0.4
-
-# If it's a URL, try to fetch and extract <title>
 if text.startswith("http://") or text.startswith("https://"):
     try:
         resp = httpx.get(text, timeout=6.0, follow_redirects=True)
@@ -95,12 +79,11 @@ else:
     bullets.append("Processed as a text claim; no external link provided.")
 
 bullets.append("MVP result: preliminary only, not a full fact-check.")
-
 latency_ms = int((time.time() - t0) * 1000)
 return AnalyzeOutput(
     verdict=verdict,
     bullets=bullets[:3],
     citations=citations[:1],
     confidence=confidence,
-    latency_ms=latency_ms
+    latency_ms=latency_ms,
 )
