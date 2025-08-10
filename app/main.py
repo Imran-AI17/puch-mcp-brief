@@ -42,7 +42,7 @@ return {
 "version": "0.1.0",
 "tools": [
 {"name": "validate", "schema": {"bearer_token": "string"}, "description": "Return owner phone in {country_code}{number} format."},
-{"name": "analyze_claim", "schema": {"input": "string"}, "description": "Trust Brief for a text or URL."}
+{"name": "analyze_claim", "schema": {"input": "string"}, "description": "Trust Brief for a text or URL."},
 ],
 }
 
