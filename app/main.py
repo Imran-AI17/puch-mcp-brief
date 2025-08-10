@@ -1,13 +1,17 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import os, time, httpx
 from typing import List, Optional
+import os
+import time
+import httpx
 
 app = FastAPI(title="Puch Trust Brief MCP")
 
-OWNER_PHONE = os.getenv("OWNER_PHONE", "919999999999") # change later
+Environment variables (set these in Render)
+OWNER_PHONE = os.getenv("OWNER_PHONE", "919999999999") # digits only, e.g., 919876543210
 VALIDATION_TOKEN = os.getenv("VALIDATION_TOKEN", "changeme")
 
+----- Schemas -----
 class ValidateInput(BaseModel):
 bearer_token: str
 
@@ -29,45 +33,60 @@ citations: List[Citation]
 confidence: float
 latency_ms: int
 
+----- Health -----
 @app.get("/")
 def health():
 return {"status": "ok"}
 
+----- MCP metadata (lets Puch list your tools) -----
 @app.get("/mcp")
 def mcp_metadata():
 return {
 "name": "puch-trust-brief",
 "version": "0.1.0",
 "tools": [
-{"name": "validate", "schema": {"bearer_token": "string"}, "description": "Return owner phone in {country_code}{number} format."},
-{"name": "analyze_claim", "schema": {"input": "string"}, "description": "Trust Brief for a text or URL."}
+{
+"name": "validate",
+"schema": {"bearer_token": "string"},
+"description": "Return owner phone in {country_code}{number} format."
+},
+{
+"name": "analyze_claim",
+"schema": {"input": "string"},
+"description": "Trust Brief for a text or URL."
+}
 ],
 }
 
+----- Required by Puch -----
 @app.post("/mcp/validate", response_model=ValidateOutput)
 def validate(payload: ValidateInput):
 if payload.bearer_token != VALIDATION_TOKEN:
 raise HTTPException(status_code=401, detail="invalid bearer_token")
 return ValidateOutput(phone=OWNER_PHONE)
 
+----- Minimal analyzer -----
 @app.post("/mcp/analyze_claim", response_model=AnalyzeOutput)
 def analyze_claim(payload: AnalyzeInput):
 t0 = time.time()
-text = payload.input.strip()
+text = (payload.input or "").strip()
 citations: List[Citation] = []
 bullets: List[str] = []
 verdict = "unverified"
 confidence = 0.4
+
+# If it's a URL, try to fetch and extract <title>
 if text.startswith("http://") or text.startswith("https://"):
     try:
         resp = httpx.get(text, timeout=6.0, follow_redirects=True)
         url = str(resp.url)
-        html = resp.text
-        title = None
+        html = resp.text or ""
         lo = html.lower()
-        s, e = lo.find("<title>"), lo.find("</title>")
+        s = lo.find("<title>")
+        e = lo.find("</title>")
+        title = None
         if s != -1 and e != -1 and e > s:
-            title = html[s+7:e].strip()[:140]
+            title = html[s + 7:e].strip()[:140]
         citations.append(Citation(title=title or "Source", source="Link", link=url))
         bullets.append("Scanned the linked page and extracted the title.")
     except Exception:
@@ -76,6 +95,7 @@ else:
     bullets.append("Processed as a text claim; no external link provided.")
 
 bullets.append("MVP result: preliminary only, not a full fact-check.")
+
 latency_ms = int((time.time() - t0) * 1000)
 return AnalyzeOutput(
     verdict=verdict,
